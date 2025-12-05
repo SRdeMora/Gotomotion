@@ -140,10 +140,8 @@ const UploadVideo: React.FC = () => {
       return;
     }
 
-    if (!paymentId) {
-      setError('Debes completar el pago primero');
-      return;
-    }
+    // paymentId es opcional ahora (modo demo)
+    // Si no hay paymentId, se puede subir el video sin pago
 
     setIsLoading(true);
     setError('');
@@ -161,7 +159,10 @@ const UploadVideo: React.FC = () => {
       if (description) formData.append('description', description.trim());
       if (materialsUsed) formData.append('materialsUsed', materialsUsed.trim());
       formData.append('categories', JSON.stringify(selectedCategories));
-      formData.append('paymentId', paymentId);
+      // paymentId es opcional - solo agregarlo si existe
+      if (paymentId) {
+        formData.append('paymentId', paymentId);
+      }
       if (videoLink) formData.append('videoLink', videoLink.trim());
       if (videoFile) formData.append('video', videoFile);
       formData.append('thumbnail', thumbnailFile);

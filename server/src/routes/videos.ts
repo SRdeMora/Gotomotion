@@ -333,46 +333,53 @@ router.post(
       console.log('[VIDEO] Datos recibidos:', {
         title,
         categories,
-        paymentId,
+        paymentId: paymentId || 'NO_PROVIDED (modo demo)',
         hasVideoLink: !!videoLink,
         hasVideoFile: !!files.video,
         hasThumbnail: !!files.thumbnail,
       });
 
-      // Verificar que el pago existe y está completado
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentId },
-      });
+      // Verificar pago solo si se proporciona paymentId (opcional para desarrollo/demo)
+      let payment = null;
+      if (paymentId) {
+        payment = await prisma.payment.findUnique({
+          where: { id: paymentId },
+        });
 
-      if (!payment) {
-        return res.status(404).json({ error: 'Pago no encontrado' });
+        if (!payment) {
+          return res.status(404).json({ error: 'Pago no encontrado' });
+        }
+
+        if (payment.userId !== req.user!.id) {
+          return res.status(403).json({ error: 'Este pago no pertenece a tu cuenta' });
+        }
+
+        if (payment.status !== 'completed') {
+          return res.status(400).json({ error: 'El pago no ha sido completado' });
+        }
+
+        // Verificar que las categorías coinciden con las pagadas
+        // En SQLite: categories es String (JSON), en PostgreSQL es array
+        const paidCategories = typeof payment.categories === 'string'
+          ? JSON.parse(payment.categories || '[]')
+          : payment.categories;
+        
+        // categories ya está parseado como array
+        const videoCategories = Array.isArray(categories) ? categories : [categories];
+        
+        console.log('[VIDEO] Categorías del video:', videoCategories);
+        console.log('[VIDEO] Categorías pagadas:', paidCategories);
+        
+        const categoriesMatch = videoCategories.every(cat => paidCategories.includes(cat));
+        if (!categoriesMatch) {
+          return res.status(400).json({ error: 'Las categorías no coinciden con las pagadas' });
+        }
+      } else {
+        console.log('[VIDEO] Modo demo: subiendo video sin verificación de pago');
       }
-
-      if (payment.userId !== req.user!.id) {
-        return res.status(403).json({ error: 'Este pago no pertenece a tu cuenta' });
-      }
-
-      if (payment.status !== 'completed') {
-        return res.status(400).json({ error: 'El pago no ha sido completado' });
-      }
-
-      // Verificar que las categorías coinciden con las pagadas
-      // En SQLite: categories es String (JSON), en PostgreSQL es array
-      const paidCategories = typeof payment.categories === 'string'
-        ? JSON.parse(payment.categories || '[]')
-        : payment.categories;
       
-      // categories ya está parseado como array en la línea 206
-      // Asegurarnos de que es un array
+      // Usar categories parseado para el resto del código
       const videoCategories = Array.isArray(categories) ? categories : [categories];
-      
-      console.log('[VIDEO] Categorías del video:', videoCategories);
-      console.log('[VIDEO] Categorías pagadas:', paidCategories);
-      
-      const categoriesMatch = videoCategories.every(cat => paidCategories.includes(cat));
-      if (!categoriesMatch) {
-        return res.status(400).json({ error: 'Las categorías no coinciden con las pagadas' });
-      }
 
       // Verificar que hay thumbnail (requerido)
       if (!files.thumbnail) {
