@@ -11,7 +11,7 @@ echo "🚀 Iniciando build del backend para Render..."
 cd server
 
 echo "📦 Instalando dependencias (incluyendo devDependencies para TypeScript)..."
-npm install --include=dev
+NODE_ENV=development npm install
 
 echo "🔄 Cambiando a SQLite para demo..."
 if npm run db:switch-sqlite; then
