@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Script de build automático para Render - Backend
+# Este script se ejecuta automáticamente durante el despliegue
+
+set -e  # Salir si hay algún error
+
+echo "🚀 Iniciando build del backend para Render..."
+
+# Ir al directorio del servidor
+cd server
+
+echo "📦 Instalando dependencias..."
+npm install
+
+echo "🔄 Cambiando a SQLite para demo..."
+npm run db:switch-sqlite
+
+echo "🔧 Generando cliente de Prisma..."
+npm run db:generate
+
+echo "⚙️ Compilando TypeScript..."
+npm run build
+
+echo "📊 Creando base de datos inicial..."
+# Crear el archivo de base de datos si no existe y aplicar esquema
+npm run db:push || echo "⚠️ Base de datos ya existe o hubo un error (continuando...)"
+
+echo "✅ Build del backend completado!"
+

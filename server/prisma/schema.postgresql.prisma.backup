@@ -1,0 +1,241 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  VOTER
+  PARTICIPANT_INDIVIDUAL
+  PARTICIPANT_TEAM
+}
+
+enum Category {
+  BEST_VIDEO
+  BEST_DIRECTION
+  BEST_PHOTOGRAPHY
+  BEST_ART
+  BEST_EDITING
+  BEST_COLOR
+}
+
+enum ForumCategory {
+  GENERAL
+  TECNICA
+  PROMOCION
+  NORMATIVA
+  SHOWCASE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  password     String
+  role         UserRole @default(VOTER)
+  avatar       String?
+  bio          String?
+  sector       String?
+  totalPoints  Int      @default(0) // Puntos acumulados anuales
+  teamMembers  String[] // Para equipos
+  socials      Json?    // { web, instagram, linkedin, twitter }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  videos       Video[]
+  votes        Vote[]
+  forumTopics  ForumTopic[]
+  forumReplies ForumReply[]
+  payments     Payment[]
+  awards       Award[]
+
+  @@index([email])
+  @@index([role])
+  @@index([totalPoints])
+}
+
+model Video {
+  id            String     @id @default(cuid())
+  title         String
+  thumbnail     String
+  videoUrl      String     // URL del video subido o link externo
+  videoLink     String?    // Link externo opcional (YouTube, Vimeo, etc.)
+  description   String?
+  materialsUsed String?
+  categories    Category[]
+  round         Int        @default(1)
+  year          Int        @default(2024)
+  views         Int        @default(0)
+  publicVotes   Int        @default(0) // Votos del público
+  juryPoints    Int        @default(0) // Puntos del jurado (3 top 2, 2 top 5)
+  totalPoints   Int        @default(0) // Total de puntos en esta liga
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  authorId      String
+  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  leagueId      String?
+  league        League?    @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  votes         Vote[]
+  juryVotes     JuryVote[]
+  payment       Payment?
+
+  @@index([authorId])
+  @@index([round, year])
+  @@index([totalPoints])
+  @@index([leagueId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  category  Category // Categoría por la que se vota
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId, category]) // Un usuario puede votar el mismo video en diferentes categorías, pero no dos veces en la misma
+  @@index([videoId])
+  @@index([userId])
+  @@index([category])
+}
+
+model ForumTopic {
+  id           String        @id @default(cuid())
+  title        String
+  category     ForumCategory
+  content      String
+  views        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relations
+  authorId     String
+  author       User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  replies      ForumReply[]
+
+  @@index([authorId])
+  @@index([category])
+}
+
+model ForumReply {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  topicId   String
+  topic     ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+  @@index([authorId])
+}
+
+model JuryMember {
+  id        String @id @default(cuid())
+  userId    String? @unique // Opcional: relacionar con User si el jurado tiene cuenta
+  name      String
+  role      String
+  image     String
+  bio       String
+  order     Int    @default(0)
+  createdAt DateTime @default(now())
+  
+  // Relations
+  votes     JuryVote[]
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float    // Cantidad pagada en euros
+  currency      String   @default("EUR")
+  status        String   // pending, completed, failed
+  paymentMethod String?  // stripe, paypal
+  paymentId     String?  // ID del pago en la pasarela
+  categories    Category[] // Categorías pagadas
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId       String?  @unique
+  video         Video?   @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentId])
+}
+
+model JuryVote {
+  id        String   @id @default(cuid())
+  category  Category // Categoría votada
+  points    Int      // 3 para top 2, 2 para top 5
+  createdAt DateTime @default(now())
+
+  // Relations
+  juryMemberId String
+  juryMember   JuryMember @relation(fields: [juryMemberId], references: [id], onDelete: Cascade)
+  videoId      String
+  video        Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  round        Int
+  year         Int
+
+  @@unique([juryMemberId, videoId, category, round, year])
+  @@index([videoId])
+  @@index([category])
+  @@index([round, year])
+}
+
+model League {
+  id          String   @id @default(cuid())
+  round       Int      // Número de liga (1-6)
+  year        Int      @default(2024)
+  name        String?
+  startDate   DateTime
+  endDate     DateTime // Fecha de cierre de votación pública
+  juryEndDate DateTime // Fecha de cierre de votación del jurado
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  videos      Video[]
+
+  @@unique([round, year]) // Una liga única por round y año
+  @@index([round, year])
+  @@index([isActive])
+}
+
+model Award {
+  id          String   @id @default(cuid())
+  category    Category
+  year        Int
+  position    Int      // 1 = primer lugar
+  prize       String   // Descripción del premio (ej: "Alquiler equipo 3000€ VISUALRENT")
+  prizeValue  Float?   // Valor del premio en euros
+  createdAt   DateTime @default(now())
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([category, year, position])
+  @@index([userId])
+  @@index([year])
+}
+

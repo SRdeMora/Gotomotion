@@ -1,0 +1,42 @@
+services:
+  # Backend API con SQLite (solo para demo rápida)
+  - type: web
+    name: go2motion-backend-sqlite
+    env: node
+    plan: free
+    buildCommand: cd server && npm install && npm run db:switch-sqlite && npm run db:generate && npm run build
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: go2motion-frontend-sqlite
+          property: host
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+
+  # Frontend
+  - type: web
+    name: go2motion-frontend-sqlite
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: go2motion-backend-sqlite
+          property: host
+

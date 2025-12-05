@@ -1,0 +1,213 @@
+// Schema para desarrollo local con SQLite
+// Este archivo NO se usa en producción
+// SQLite no soporta enums, por lo que se usan Strings
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// SQLite no soporta enums nativos, se usan como String
+// Valores válidos para role: "VOTER", "PARTICIPANT_INDIVIDUAL", "PARTICIPANT_TEAM"
+// Valores válidos para category: "BEST_VIDEO", "BEST_DIRECTION", "BEST_PHOTOGRAPHY", "BEST_ART", "BEST_EDITING", "BEST_COLOR"
+// Valores válidos para forumCategory: "GENERAL", "TECNICA", "PROMOCION", "NORMATIVA", "SHOWCASE"
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  password     String
+  role         String   @default("VOTER") // SQLite: String en lugar de enum UserRole
+  avatar       String?
+  bio          String?
+  sector       String?
+  totalPoints  Int      @default(0)
+  teamMembers  String   @default("[]") // SQLite: String en lugar de String[]
+  socials      String?  // SQLite: String en lugar de Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  videos       Video[]
+  votes        Vote[]
+  forumTopics  ForumTopic[]
+  forumReplies ForumReply[]
+  payments     Payment[]
+  awards       Award[]
+
+  @@index([email])
+  @@index([role])
+  @@index([totalPoints])
+}
+
+model Video {
+  id            String   @id @default(cuid())
+  title         String
+  thumbnail     String
+  videoUrl      String
+  videoLink     String?
+  description   String?
+  materialsUsed String?
+  categories    String   @default("[]") // SQLite: String en lugar de Category[]
+  round         Int      @default(1)
+  year          Int      @default(2024)
+  views         Int      @default(0)
+  publicVotes   Int      @default(0)
+  juryPoints    Int      @default(0)
+  totalPoints   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  leagueId      String?
+  league        League?  @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  votes         Vote[]
+  juryVotes     JuryVote[]
+  payment       Payment?
+
+  @@index([authorId])
+  @@index([round, year])
+  @@index([totalPoints])
+  @@index([leagueId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  category  String   // SQLite: String en lugar de Category enum
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId, category])
+  @@index([videoId])
+  @@index([userId])
+  @@index([category])
+}
+
+model ForumTopic {
+  id           String   @id @default(cuid())
+  title        String
+  category     String   // SQLite: String en lugar de ForumCategory enum
+  content      String
+  views        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  replies      ForumReply[]
+
+  @@index([authorId])
+  @@index([category])
+}
+
+model ForumReply {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  topicId   String
+  topic     ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+  @@index([authorId])
+}
+
+model JuryMember {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  name      String
+  role      String
+  image     String
+  bio       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  
+  votes     JuryVote[]
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  currency      String   @default("EUR")
+  status        String
+  paymentMethod String?
+  paymentId     String?  @unique
+  categories    String   @default("[]") // SQLite: String en lugar de Category[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId       String?  @unique
+  video         Video?   @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentId])
+}
+
+model JuryVote {
+  id        String   @id @default(cuid())
+  category  String   // SQLite: String en lugar de Category enum
+  points    Int
+  createdAt DateTime @default(now())
+
+  juryMemberId String
+  juryMember   JuryMember @relation(fields: [juryMemberId], references: [id], onDelete: Cascade)
+  videoId      String
+  video        Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  round        Int
+  year         Int
+
+  @@unique([juryMemberId, videoId, category, round, year])
+  @@index([videoId])
+  @@index([category])
+  @@index([round, year])
+}
+
+model League {
+  id          String   @id @default(cuid())
+  round       Int
+  year        Int      @default(2024)
+  name        String?
+  startDate   DateTime
+  endDate     DateTime
+  juryEndDate DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  videos      Video[]
+
+  @@unique([round, year])
+  @@index([round, year])
+  @@index([isActive])
+}
+
+model Award {
+  id          String   @id @default(cuid())
+  category    String   // SQLite: String en lugar de Category enum
+  year        Int
+  position    Int
+  prize       String
+  prizeValue  Float?
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([category, year, position])
+  @@index([userId])
+  @@index([year])
+}

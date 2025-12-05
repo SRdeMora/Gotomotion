@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Plataforma definitiva para creadores de videoclips. Compite, vota y conecta con la industria en la Liga Go2Motion Awards." />
+    <meta name="keywords" content="videoclips, concurso, premios, go2motion, audiovisual, creatividad" />
+    <meta name="author" content="Go2Motion Awards" />
+    <meta property="og:title" content="Go2Motion Awards - Liga de Videoclips" />
+    <meta property="og:description" content="Plataforma definitiva para creadores de videoclips. Compite, vota y conecta con la industria." />
+    <meta property="og:type" content="website" />
+    <title>Go2Motion Awards - Liga de Videoclips</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#6366f1', // Indigo 500
+              secondary: '#ec4899', // Pink 500
+              accent: '#f59e0b', // Amber 500
+              dark: '#0f172a', // Slate 900
+              darker: '#020617', // Slate 950
+              card: '#1e293b', // Slate 800
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Custom scrollbar for better aesthetics */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-darker text-slate-200 antialiased selection:bg-secondary selection:text-white">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
