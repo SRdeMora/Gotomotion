@@ -87,21 +87,53 @@ class ApiService {
         throw customError;
       }
 
-      // Verificar que la respuesta tenga contenido antes de parsear
-      const responseText = await response.text();
-      if (!responseText || responseText.trim() === '') {
-        console.warn(`[API] Respuesta vacía de ${endpoint}`);
-        return {} as T;
+      // Verificar content-type
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+      
+      // Si no es JSON, intentar leer como texto primero para debugging
+      if (!isJson) {
+        const text = await response.text();
+        console.error(`[API] Respuesta no es JSON de ${endpoint}`);
+        console.error(`[API] Content-Type: ${contentType}`);
+        console.error(`[API] Status: ${response.status}`);
+        console.error(`[API] Contenido recibido:`, text.substring(0, 500));
+        throw new Error(`El servidor devolvió una respuesta no válida (${response.status})`);
       }
 
-      let data;
+      // Intentar parsear JSON directamente
+      let data: T;
       try {
-        data = JSON.parse(responseText);
-        console.log(`[API] Respuesta de ${endpoint}:`, data);
-      } catch (parseError) {
-        console.error(`[API] Error al parsear JSON de ${endpoint}:`, parseError);
-        console.error(`[API] Respuesta recibida:`, responseText.substring(0, 200));
-        throw new Error('Respuesta inválida del servidor');
+        // Clonar la respuesta para poder leerla si falla
+        const clonedResponse = response.clone();
+        
+        try {
+          data = await response.json();
+          console.log(`[API] Respuesta de ${endpoint}:`, data);
+        } catch (jsonError: any) {
+          // Si falla el parseo, intentar leer como texto para debugging
+          const text = await clonedResponse.text();
+          console.error(`[API] Error al parsear JSON de ${endpoint}:`, jsonError);
+          console.error(`[API] Status: ${response.status}`);
+          console.error(`[API] Content-Type: ${contentType}`);
+          console.error(`[API] Respuesta recibida (primeros 1000 chars):`, text.substring(0, 1000));
+          
+          // Si la respuesta está vacía, devolver objeto vacío
+          if (!text || text.trim() === '') {
+            console.warn(`[API] Respuesta vacía de ${endpoint}`);
+            return {} as T;
+          }
+          
+          throw new Error(`Respuesta inválida del servidor: ${text.substring(0, 200)}`);
+        }
+      } catch (error: any) {
+        // Si es un error que ya lanzamos, re-lanzarlo
+        if (error.message && error.message.includes('Respuesta inválida')) {
+          throw error;
+        }
+        // Si es otro tipo de error, envolverlo
+        console.error(`[API] Error inesperado en ${endpoint}:`, error);
+        throw new Error(`Error al procesar la respuesta del servidor: ${error.message}`);
       }
       
       return data;

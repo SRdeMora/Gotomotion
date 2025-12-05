@@ -149,10 +149,20 @@ router.post(
 
       const { password: _, ...userWithoutPassword } = user;
 
-      res.json({
-        user: userWithoutPassword,
-        token,
-      });
+      // Asegurar que siempre se devuelva JSON válido
+      try {
+        res.json({
+          user: userWithoutPassword,
+          token,
+        });
+      } catch (jsonError: any) {
+        console.error('❌ [AUTH] Error al serializar respuesta JSON:', jsonError);
+        // Si falla la serialización, devolver respuesta básica
+        res.status(500).json({
+          error: 'Error al procesar la respuesta',
+          message: 'Ha ocurrido un error al generar la respuesta. Por favor, intenta más tarde.'
+        });
+      }
     } catch (error: any) {
       console.error('❌ [AUTH] Error en login:', error);
       console.error('❌ [AUTH] Stack:', error?.stack);

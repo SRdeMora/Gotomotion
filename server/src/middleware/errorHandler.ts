@@ -96,11 +96,26 @@ export const errorHandler = (
     ? err.message 
     : 'Ha ocurrido un error inesperado. Por favor, intenta más tarde.';
   
-  res.status(500).json({
-    error: 'Error interno del servidor',
-    message: friendlyMessage,
-    // Solo incluir detalles técnicos en desarrollo
-    details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-  });
+  // Asegurar que siempre se devuelva JSON válido
+  try {
+    // Verificar que los headers no se hayan enviado ya
+    if (res.headersSent) {
+      console.error('❌ Headers ya enviados, no se puede enviar respuesta de error');
+      return;
+    }
+    
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: friendlyMessage,
+      // Solo incluir detalles técnicos en desarrollo
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    });
+  } catch (jsonError: any) {
+    console.error('❌ Error crítico: No se pudo enviar respuesta JSON de error:', jsonError);
+    // Último recurso: intentar enviar texto plano
+    if (!res.headersSent) {
+      res.status(500).send('Error interno del servidor');
+    }
+  }
 };
 

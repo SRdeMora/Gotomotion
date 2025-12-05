@@ -146,8 +146,10 @@ router.get(
       // Asegurar que siempre devolvamos un array válido
       const videosList = videos || [];
       
-      res.json({
-        videos: videosList.map((v) => {
+      // Asegurar que siempre se devuelva JSON válido
+      try {
+        res.json({
+          videos: videosList.map((v) => {
           // Parsear categories si viene como string (SQLite)
           const categories = typeof v.categories === 'string'
             ? JSON.parse(v.categories || '[]')
@@ -167,7 +169,21 @@ router.get(
           total,
           pages: Math.ceil(total / Number(limit)),
         },
-      });
+        });
+      } catch (jsonError: any) {
+        console.error('[VIDEOS] Error al serializar respuesta JSON:', jsonError);
+        // Si falla la serialización, devolver respuesta básica
+        res.status(500).json({
+          error: 'Error al procesar la respuesta',
+          videos: [],
+          pagination: {
+            page: Number(page) || 1,
+            limit: Number(limit) || 20,
+            total: 0,
+            pages: 0,
+          }
+        });
+      }
     } catch (error: any) {
       console.error('[VIDEOS] Error al obtener videos:', error);
       console.error('[VIDEOS] Stack:', error?.stack);
