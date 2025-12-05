@@ -25,7 +25,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Initialize Sentry
+// Initialize Sentry (opcional)
 if (process.env.SENTRY_DSN) {
   try {
     Sentry.init({
@@ -33,11 +33,7 @@ if (process.env.SENTRY_DSN) {
       environment: process.env.NODE_ENV || 'development',
       tracesSampleRate: 1.0,
     });
-
-    // Sentry handlers (solo si están disponibles)
-    if (Sentry.setupExpressErrorHandler) {
-      app.use(Sentry.setupExpressErrorHandler());
-    }
+    console.log('✅ Sentry inicializado');
   } catch (error) {
     console.log('⚠️ Sentry no configurado (continuando sin Sentry)');
   }

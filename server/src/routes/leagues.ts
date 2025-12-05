@@ -89,7 +89,12 @@ router.post(
       const { round, year, name, startDate, endDate, juryEndDate } = req.body;
 
       const league = await prisma.league.upsert({
-        where: { round },
+        where: { 
+          round_year: {
+            round: Number(round),
+            year: Number(year)
+          }
+        },
         update: {
           year: Number(year),
           name,
