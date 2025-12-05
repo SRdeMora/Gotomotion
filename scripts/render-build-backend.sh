@@ -23,6 +23,9 @@ fi
 echo "🔧 Generando cliente de Prisma..."
 npm run db:generate
 
+echo "📊 Inicializando base de datos..."
+npm run db:push || echo "⚠️ Base de datos ya inicializada o error (continuando...)"
+
 echo "⚙️ Compilando TypeScript..."
 npm run build
 

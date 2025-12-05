@@ -143,8 +143,11 @@ router.get(
         prisma.video.count({ where: finalWhere }),
       ]);
 
+      // Asegurar que siempre devolvamos un array válido
+      const videosList = videos || [];
+      
       res.json({
-        videos: videos.map((v) => {
+        videos: videosList.map((v) => {
           // Parsear categories si viene como string (SQLite)
           const categories = typeof v.categories === 'string'
             ? JSON.parse(v.categories || '[]')
@@ -165,7 +168,35 @@ router.get(
           pages: Math.ceil(total / Number(limit)),
         },
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[VIDEOS] Error al obtener videos:', error);
+      console.error('[VIDEOS] Stack:', error?.stack);
+      
+      // Asegurar que siempre se devuelva una respuesta válida
+      if (!res.headersSent) {
+        if (error.name === 'PrismaClientKnownRequestError' || error.name === 'PrismaClientInitializationError') {
+          return res.status(503).json({ 
+            error: 'Base de datos no disponible',
+            videos: [],
+            pagination: {
+              page: Number(req.query.page) || 1,
+              limit: Number(req.query.limit) || 20,
+              total: 0,
+              pages: 0,
+            }
+          });
+        }
+        return res.status(500).json({ 
+          error: 'Error al obtener videos',
+          videos: [],
+          pagination: {
+            page: Number(req.query.page) || 1,
+            limit: Number(req.query.limit) || 20,
+            total: 0,
+            pages: 0,
+          }
+        });
+      }
       next(error);
     }
   }

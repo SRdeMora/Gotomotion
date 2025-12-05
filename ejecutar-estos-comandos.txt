@@ -1,0 +1,14 @@
+# Ejecuta estos comandos después de crear el repositorio en GitHub
+
+# Reemplaza NOMBRE_DEL_REPO con el nombre que pusiste en GitHub
+# Por ejemplo, si se llama "go2motion-awards", sería:
+# git remote add origin https://github.com/SRdeMora/go2motion-awards.git
+
+git remote add origin https://github.com/SRdeMora/NOMBRE_DEL_REPO.git
+
+# Verificar que se agregó correctamente
+git remote -v
+
+# Subir a GitHub (tu rama es "master")
+git push -u origin master
+

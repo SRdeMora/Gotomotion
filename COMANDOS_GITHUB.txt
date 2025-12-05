@@ -1,0 +1,16 @@
+# Comandos para conectar con GitHub
+
+## Después de crear el repositorio en GitHub, ejecuta estos comandos:
+
+# 1. Agregar el repositorio remoto (reemplaza TU_USUARIO y TU_REPO con los tuyos)
+git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
+
+# 2. Verificar que se agregó correctamente
+git remote -v
+
+# 3. Subir a GitHub
+git push -u origin main
+
+# Si la rama se llama "master" en lugar de "main", usa:
+# git push -u origin master
+

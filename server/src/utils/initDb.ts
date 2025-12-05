@@ -8,19 +8,44 @@ const prisma = new PrismaClient();
  */
 export async function initDatabase() {
   try {
+    console.log('🔧 Inicializando base de datos...');
+    
     // Intentar conectar a la base de datos
     // Prisma creará automáticamente el archivo SQLite si no existe
     await prisma.$connect();
     console.log('✅ Base de datos conectada');
     
     // Intentar ejecutar una query simple para verificar que funciona
-    // Esto también creará las tablas si no existen (con db push)
+    // Esto también creará las tablas si no existen (si se ejecutó db push antes)
     await prisma.$executeRaw`SELECT 1`;
-    console.log('✅ Base de datos lista');
+    console.log('✅ Base de datos lista y funcionando');
+    
+    // Verificar que las tablas existan creando una liga por defecto si no hay ninguna
+    try {
+      const leagueCount = await prisma.league.count();
+      if (leagueCount === 0) {
+        const currentYear = new Date().getFullYear();
+        await prisma.league.create({
+          data: {
+            round: 1,
+            year: currentYear,
+            name: 'Liga Inicial',
+            startDate: new Date(),
+            endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+            juryEndDate: new Date(new Date().setMonth(new Date().getMonth() + 2)),
+            isActive: true,
+          },
+        });
+        console.log('✅ Liga por defecto creada');
+      }
+    } catch (error: any) {
+      console.log('⚠️ No se pudo crear liga por defecto (puede que ya exista):', error.message);
+    }
   } catch (error: any) {
-    console.log('⚠️ Base de datos se inicializará en la primera operación:', error.message);
+    console.error('❌ Error al inicializar base de datos:', error.message);
+    console.error('❌ Stack:', error.stack);
+    console.log('⚠️ El servidor continuará, pero algunas funciones pueden no funcionar');
     // No lanzar error, dejar que el servidor inicie de todas formas
-    // La base de datos se creará cuando se haga la primera operación
   }
 }
 

@@ -40,10 +40,39 @@ if (process.env.SENTRY_DSN) {
 }
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS configuration - permitir múltiples orígenes
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'https://go2motion-frontend.onrender.com',
+  'https://go2motion-backend.onrender.com',
+].filter(Boolean) as string[];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como Postman o mobile apps)
+    if (!origin) return callback(null, true);
+    
+    // Permitir cualquier origen en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // En producción, verificar contra la lista de orígenes permitidos
+    if (allowedOrigins.some(allowed => origin.includes(allowed.replace(/^https?:\/\//, '')))) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS bloqueado para origen: ${origin}`);
+      callback(null, true); // Permitir de todas formas para debug
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Rate limiting

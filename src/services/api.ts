@@ -40,12 +40,27 @@ class ApiService {
         headers,
       });
 
+      // Verificar si la respuesta tiene contenido antes de parsear
+      const contentType = response.headers.get('content-type');
+      const hasJsonContent = contentType && contentType.includes('application/json');
+      
       if (!response.ok) {
         let errorData;
         try {
-          errorData = await response.json();
-        } catch {
-          errorData = { error: `Error ${response.status}: ${response.statusText}` };
+          const text = await response.text();
+          if (text && hasJsonContent) {
+            errorData = JSON.parse(text);
+          } else {
+            errorData = { 
+              error: `Error ${response.status}: ${response.statusText}`,
+              message: text || `Error ${response.status}: ${response.statusText}`
+            };
+          }
+        } catch (parseError) {
+          errorData = { 
+            error: `Error ${response.status}: ${response.statusText}`,
+            message: `Error ${response.status}: ${response.statusText}`
+          };
         }
         
         // Convertir mensajes técnicos en mensajes amigables
@@ -72,8 +87,23 @@ class ApiService {
         throw customError;
       }
 
-      const data = await response.json();
-      console.log(`[API] Respuesta de ${endpoint}:`, data);
+      // Verificar que la respuesta tenga contenido antes de parsear
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        console.warn(`[API] Respuesta vacía de ${endpoint}`);
+        return {} as T;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log(`[API] Respuesta de ${endpoint}:`, data);
+      } catch (parseError) {
+        console.error(`[API] Error al parsear JSON de ${endpoint}:`, parseError);
+        console.error(`[API] Respuesta recibida:`, responseText.substring(0, 200));
+        throw new Error('Respuesta inválida del servidor');
+      }
+      
       return data;
     } catch (error: any) {
       // Mejorar mensajes de error para conexión

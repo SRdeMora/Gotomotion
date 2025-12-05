@@ -85,6 +85,24 @@ router.post(
     } catch (error: any) {
       console.error('❌ [AUTH] Error en registro:', error);
       console.error('❌ [AUTH] Stack:', error?.stack);
+      console.error('❌ [AUTH] Error completo:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      
+      // Asegurar que siempre se devuelva un error válido
+      if (!res.headersSent) {
+        if (error.name === 'PrismaClientKnownRequestError') {
+          if (error.code === 'P2002') {
+            return res.status(400).json({ error: 'El email ya está registrado' });
+          }
+          return res.status(500).json({ 
+            error: 'Error en la base de datos',
+            message: 'No se pudo crear el usuario. Por favor, intenta más tarde.'
+          });
+        }
+        return res.status(500).json({ 
+          error: 'Error al registrar usuario',
+          message: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta más tarde.'
+        });
+      }
       next(error);
     }
   }
