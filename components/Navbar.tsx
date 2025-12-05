@@ -13,6 +13,16 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const { isAdmin, isLoading } = useAdmin();
+  
+  // DEBUG: Log cuando cambia el estado de admin
+  React.useEffect(() => {
+    console.log('[NAVBAR] Estado admin actualizado:', { 
+      isAdmin, 
+      isLoading, 
+      userEmail: user?.email,
+      tieneUser: !!user 
+    });
+  }, [isAdmin, isLoading, user]);
 
   const navLinks = [
     { name: 'Concurso', path: '/contest' },

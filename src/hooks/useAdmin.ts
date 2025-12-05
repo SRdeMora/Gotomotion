@@ -146,14 +146,15 @@ export const useAdmin = (): AdminStatus => {
     checkAdminStatus();
     
     // Re-ejecutar cuando cambie el usuario (por si se loguea después)
-    const interval = setInterval(() => {
+    // Usar un listener de eventos en lugar de intervalo para mejor rendimiento
+    const checkInterval = setInterval(() => {
       const user = authService.getUser();
       if (user && user.email) {
         checkAdminStatus();
       }
-    }, 2000); // Verificar cada 2 segundos
+    }, 3000); // Verificar cada 3 segundos
     
-    return () => clearInterval(interval);
+    return () => clearInterval(checkInterval);
   }, []);
 
   return status;

@@ -53,17 +53,11 @@ export const uploadToCloudinary = async (
 ): Promise<{ url: string; public_id: string }> => {
   // Verificar configuración
   if (!isCloudinaryConfigured()) {
-    console.warn('⚠️  Cloudinary no está configurado. Usando almacenamiento temporal (base64) para desarrollo.');
-    console.warn('⚠️  Para producción, configura CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET en server/.env');
+    console.warn('⚠️  Cloudinary no está configurado. Usando almacenamiento temporal (base64).');
+    console.warn('⚠️  Para producción, configura CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET en Render');
     
-    // En desarrollo, usar base64 como alternativa temporal
-    if (process.env.NODE_ENV === 'development') {
-      return uploadToBase64(file);
-    }
-    
-    throw new Error(
-      'Cloudinary no está configurado. Por favor, configura CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET en server/.env'
-    );
+    // Usar base64 como alternativa (funciona en desarrollo y producción para demo)
+    return uploadToBase64(file);
   }
 
   // Validar que el archivo tenga buffer
@@ -82,14 +76,23 @@ export const uploadToCloudinary = async (
         (error, result) => {
           if (error) {
             console.error('❌ Error de Cloudinary:', error);
-            reject(new Error(`Error al subir a Cloudinary: ${error.message || 'Error desconocido'}`));
+            console.warn('⚠️  Cloudinary falló. Usando almacenamiento temporal (base64) como fallback.');
+            
+            // Si Cloudinary falla, usar base64 como fallback
+            uploadToBase64(file)
+              .then(resolve)
+              .catch(reject);
           } else if (result) {
             resolve({
               url: result.secure_url,
               public_id: result.public_id,
             });
           } else {
-            reject(new Error('No se recibió resultado de Cloudinary'));
+            // Si no hay resultado, usar base64 como fallback
+            console.warn('⚠️  Cloudinary no devolvió resultado. Usando base64 como fallback.');
+            uploadToBase64(file)
+              .then(resolve)
+              .catch(reject);
           }
         }
       );
@@ -100,7 +103,12 @@ export const uploadToCloudinary = async (
       bufferStream.pipe(uploadStream);
     } catch (error: any) {
       console.error('❌ Error al crear stream de Cloudinary:', error);
-      reject(new Error(`Error al procesar archivo: ${error.message || 'Error desconocido'}`));
+      console.warn('⚠️  Usando base64 como fallback debido a error.');
+      
+      // Si hay error al crear el stream, usar base64 como fallback
+      uploadToBase64(file)
+        .then(resolve)
+        .catch(reject);
     }
   });
 };
