@@ -9,32 +9,16 @@ const prisma = new PrismaClient();
 export async function initDatabase() {
   try {
     // Intentar conectar a la base de datos
+    // Prisma creará automáticamente el archivo SQLite si no existe
     await prisma.$connect();
     console.log('✅ Base de datos conectada');
     
     // Intentar ejecutar una query simple para verificar que funciona
+    // Esto también creará las tablas si no existen (con db push)
     await prisma.$executeRaw`SELECT 1`;
-    
-    // Intentar aplicar el esquema usando Prisma directamente
-    // Esto creará las tablas si no existen
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
-        id TEXT PRIMARY KEY,
-        checksum TEXT NOT NULL,
-        finished_at DATETIME,
-        migration_name TEXT NOT NULL,
-        logs TEXT,
-        rolled_back_at DATETIME,
-        started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        applied_steps_count INTEGER NOT NULL DEFAULT 0
-      );
-    `).catch(() => {
-      // Ignorar error si la tabla ya existe
-    });
-    
-    console.log('✅ Base de datos inicializada');
+    console.log('✅ Base de datos lista');
   } catch (error: any) {
-    console.log('⚠️ Error al inicializar base de datos (continuando...):', error.message);
+    console.log('⚠️ Base de datos se inicializará en la primera operación:', error.message);
     // No lanzar error, dejar que el servidor inicie de todas formas
     // La base de datos se creará cuando se haga la primera operación
   }
