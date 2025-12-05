@@ -53,15 +53,15 @@ class ApiService {
         headers,
       });
 
-      // Verificar si la respuesta tiene contenido antes de parsear
-      const contentType = response.headers.get('content-type');
-      const hasJsonContent = contentType && contentType.includes('application/json');
+      // Verificar content-type una sola vez
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
       
       if (!response.ok) {
         let errorData;
         try {
           const text = await response.text();
-          if (text && hasJsonContent) {
+          if (text && isJson) {
             errorData = JSON.parse(text);
           } else {
             errorData = { 
@@ -99,10 +99,6 @@ class ApiService {
         console.error(`[API] Error ${response.status} en ${endpoint}:`, errorData);
         throw customError;
       }
-
-      // Verificar content-type
-      const contentType = response.headers.get('content-type') || '';
-      const isJson = contentType.includes('application/json');
       
       // Si no es JSON, intentar leer como texto primero para debugging
       if (!isJson) {
