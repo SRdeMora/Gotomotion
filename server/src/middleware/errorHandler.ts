@@ -25,9 +25,10 @@ export const errorHandler = (
     const isConnectionError = err.message?.includes('Can\'t reach database server') || 
                               err.message?.includes('P1001') ||
                               err.message?.includes('connection') ||
-                              err.message?.includes('ECONNREFUSED');
+                              err.message?.includes('ECONNREFUSED') ||
+                              err.message?.includes('Execute returned results');
     
-    if (isConnectionError) {
+    if (isConnectionError || err.message?.includes('Execute returned results')) {
       res.status(503).json({
         error: 'Base de datos no disponible',
         message: 'El servicio no está disponible temporalmente. Por favor, intenta más tarde.',

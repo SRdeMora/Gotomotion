@@ -15,16 +15,10 @@ export async function initDatabase() {
     await prisma.$connect();
     console.log('✅ Base de datos conectada');
     
-    // Intentar ejecutar una query simple para verificar que funciona
-    // En SQLite, usar $queryRaw en lugar de $executeRaw para queries que devuelven resultados
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      console.log('✅ Base de datos lista y funcionando');
-    } catch (error: any) {
-      // Si falla, intentar con una operación simple que no devuelva resultados
-      await prisma.user.count();
-      console.log('✅ Base de datos lista y funcionando');
-    }
+    // Verificar que la base de datos funciona con una operación simple
+    // Usar count() que funciona tanto en SQLite como PostgreSQL
+    await prisma.user.count();
+    console.log('✅ Base de datos lista y funcionando');
     
     // Verificar que las tablas existan creando una liga por defecto si no hay ninguna
     try {

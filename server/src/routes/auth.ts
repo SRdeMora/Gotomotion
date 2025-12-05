@@ -154,8 +154,23 @@ router.post(
         token,
       });
     } catch (error: any) {
-      console.error('❌ [AUTH] Error en registro:', error);
+      console.error('❌ [AUTH] Error en login:', error);
       console.error('❌ [AUTH] Stack:', error?.stack);
+      console.error('❌ [AUTH] Error completo:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      
+      // Asegurar que siempre se devuelva un error válido
+      if (!res.headersSent) {
+        if (error.name === 'PrismaClientKnownRequestError' || error.name === 'PrismaClientInitializationError') {
+          return res.status(503).json({ 
+            error: 'Base de datos no disponible',
+            message: 'El servicio no está disponible temporalmente. Por favor, intenta más tarde.'
+          });
+        }
+        return res.status(500).json({ 
+          error: 'Error al iniciar sesión',
+          message: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta más tarde.'
+        });
+      }
       next(error);
     }
   }
