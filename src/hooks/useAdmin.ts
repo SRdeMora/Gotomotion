@@ -90,10 +90,21 @@ export const useAdmin = (): AdminStatus => {
         }
 
         // El usuario es admin si pasa la verificación remota O la local
-        // Priorizamos la remota si está disponible
-        const isAdmin = backendError && backendError.status !== 500 
-          ? isRemoteAdmin 
-          : (isLocalAdmin || isRemoteAdmin);
+        // Priorizamos la remota si está disponible y no hay error crítico
+        let isAdmin = false;
+        
+        if (backendError) {
+          // Si hay error del backend pero no es 500, confiar solo en remoto
+          if (backendError.status !== 500 && backendError.status !== 401) {
+            isAdmin = isRemoteAdmin;
+          } else {
+            // Si es 500 o 401, usar verificación local como fallback
+            isAdmin = isLocalAdmin;
+          }
+        } else {
+          // Sin errores: usar remoto (más seguro) o local como fallback
+          isAdmin = isRemoteAdmin || isLocalAdmin;
+        }
 
         // Si hay error 500 del backend y no hay verificación local, mostrar error útil
         let errorMessage = null;

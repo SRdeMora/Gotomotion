@@ -25,6 +25,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - necesario para Render y otros servicios detrás de proxy
+// Esto permite que express-rate-limit identifique correctamente las IPs
+app.set('trust proxy', 1);
+
 // Initialize Sentry (opcional)
 if (process.env.SENTRY_DSN) {
   try {
