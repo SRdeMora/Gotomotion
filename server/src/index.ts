@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/node';
 import dotenv from 'dotenv';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
+import { initDatabase } from './utils/initDb';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import videoRoutes from './routes/videos';
@@ -80,9 +81,19 @@ if (process.env.SENTRY_DSN) {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+// Inicializar base de datos antes de iniciar el servidor
+initDatabase().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}).catch((error) => {
+  console.error('❌ Error al inicializar servidor:', error);
+  // Iniciar servidor de todas formas
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT} (sin inicialización de DB)`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 });
 
 export default app;

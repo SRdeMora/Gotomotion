@@ -14,17 +14,17 @@ echo "📦 Instalando dependencias..."
 npm install
 
 echo "🔄 Cambiando a SQLite para demo..."
-npm run db:switch-sqlite
+if npm run db:switch-sqlite; then
+  echo "✅ Cambiado a SQLite"
+else
+  echo "⚠️ Error al cambiar a SQLite, continuando..."
+fi
 
 echo "🔧 Generando cliente de Prisma..."
 npm run db:generate
 
 echo "⚙️ Compilando TypeScript..."
 npm run build
-
-echo "📊 Creando base de datos inicial..."
-# Crear el archivo de base de datos si no existe y aplicar esquema
-npm run db:push || echo "⚠️ Base de datos ya existe o hubo un error (continuando...)"
 
 echo "✅ Build del backend completado!"
 
