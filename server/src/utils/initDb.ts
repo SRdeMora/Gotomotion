@@ -16,9 +16,15 @@ export async function initDatabase() {
     console.log('✅ Base de datos conectada');
     
     // Intentar ejecutar una query simple para verificar que funciona
-    // Esto también creará las tablas si no existen (si se ejecutó db push antes)
-    await prisma.$executeRaw`SELECT 1`;
-    console.log('✅ Base de datos lista y funcionando');
+    // En SQLite, usar $queryRaw en lugar de $executeRaw para queries que devuelven resultados
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('✅ Base de datos lista y funcionando');
+    } catch (error: any) {
+      // Si falla, intentar con una operación simple que no devuelva resultados
+      await prisma.user.count();
+      console.log('✅ Base de datos lista y funcionando');
+    }
     
     // Verificar que las tablas existan creando una liga por defecto si no hay ninguna
     try {
