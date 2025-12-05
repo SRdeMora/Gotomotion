@@ -9,23 +9,43 @@ const prisma = new PrismaClient();
 
 // Endpoint de diagnóstico para verificar configuración
 router.get('/diagnostics', authenticate, async (req: AuthRequest, res) => {
-  const adminEmailsRaw = process.env.ADMIN_EMAILS || '';
-  const adminEmails = adminEmailsRaw
-    .split(',')
-    .map(email => email.trim().toLowerCase())
-    .filter(email => email.length > 0);
-  
-  const userEmail = req.user?.email?.toLowerCase().trim() || '';
-  
-  res.json({
-    configured: adminEmails.length > 0,
-    adminEmailsRaw,
-    adminEmails,
-    userEmail,
-    isAdmin: adminEmails.includes(userEmail),
-    envLoaded: !!process.env.ADMIN_EMAILS,
-    allEnvKeys: Object.keys(process.env).filter(k => k.includes('ADMIN') || k.includes('EMAIL')),
-  });
+  try {
+    const adminEmailsRaw = process.env.ADMIN_EMAILS || '';
+    const adminEmails = adminEmailsRaw
+      .split(',')
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+    
+    const userEmail = req.user?.email?.toLowerCase().trim() || '';
+    const isAdmin = adminEmails.length > 0 && adminEmails.includes(userEmail);
+    
+    // Log detallado para debugging (siempre en producción también para troubleshooting)
+    console.log('[ADMIN DIAGNOSTICS]', {
+      adminEmailsRaw,
+      adminEmails,
+      userEmail,
+      isAdmin,
+      envLoaded: !!process.env.ADMIN_EMAILS,
+      userId: req.user?.id,
+      userRole: req.user?.role,
+    });
+    
+    res.json({
+      configured: adminEmails.length > 0,
+      adminEmailsRaw,
+      adminEmails,
+      userEmail,
+      isAdmin,
+      envLoaded: !!process.env.ADMIN_EMAILS,
+      allEnvKeys: Object.keys(process.env).filter(k => k.includes('ADMIN') || k.includes('EMAIL')),
+    });
+  } catch (error: any) {
+    console.error('[ADMIN DIAGNOSTICS] Error:', error);
+    res.status(500).json({
+      error: 'Error al obtener diagnóstico',
+      message: error.message,
+    });
+  }
 });
 
 // Middleware profesional para verificar que es admin
