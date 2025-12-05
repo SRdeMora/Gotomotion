@@ -307,7 +307,7 @@ router.post(
         throw new Error('videoLink debe ser una URL válida');
       }
     }),
-    body('paymentId').isString().notEmpty(), // ID del pago verificado
+    body('paymentId').optional().isString(), // ID del pago verificado (opcional para desarrollo/demo)
   ],
   async (req: AuthRequest, res, next) => {
     try {
