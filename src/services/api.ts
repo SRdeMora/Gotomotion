@@ -7,7 +7,20 @@ const getApiUrl = () => {
     return '/api';
   }
   // En producción, usar la URL completa si está configurada
-  return import.meta.env.VITE_API_URL || '/api';
+  const apiUrl = import.meta.env.VITE_API_URL || '/api';
+  
+  // Asegurar que la URL termine con /api si es una URL completa
+  // pero no duplicar /api si ya está incluido
+  if (apiUrl.startsWith('http')) {
+    // Si es una URL completa, asegurar que termine con /api
+    if (!apiUrl.endsWith('/api')) {
+      return apiUrl.endsWith('/') ? `${apiUrl}api` : `${apiUrl}/api`;
+    }
+    return apiUrl;
+  }
+  
+  // Si es una ruta relativa, devolverla tal cual
+  return apiUrl;
 };
 
 interface RequestOptions extends RequestInit {
