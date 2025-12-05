@@ -27,14 +27,20 @@ const PORT = process.env.PORT || 5000;
 
 // Initialize Sentry
 if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
-    tracesSampleRate: 1.0,
-  });
+  try {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'development',
+      tracesSampleRate: 1.0,
+    });
 
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
+    // Sentry handlers (solo si están disponibles)
+    if (Sentry.setupExpressErrorHandler) {
+      app.use(Sentry.setupExpressErrorHandler());
+    }
+  } catch (error) {
+    console.log('⚠️ Sentry no configurado (continuando sin Sentry)');
+  }
 }
 
 // Security middleware
@@ -75,9 +81,6 @@ app.use('/api/leagues', leagueRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Error handling (must be after routes)
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
-}
 app.use(notFoundHandler);
 app.use(errorHandler);
 
