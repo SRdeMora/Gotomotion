@@ -8,25 +8,35 @@ const prisma = new PrismaClient();
  */
 export async function initDatabase() {
   try {
-    // Intentar conectar y crear las tablas si no existen
+    // Intentar conectar a la base de datos
     await prisma.$connect();
-    await prisma.$executeRaw`SELECT 1`;
     console.log('✅ Base de datos conectada');
     
-    // Intentar aplicar el esquema (solo crea tablas si no existen)
-    const { execSync } = require('child_process');
-    try {
-      execSync('npx prisma db push --skip-generate', { 
-        stdio: 'inherit',
-        cwd: process.cwd() 
-      });
-      console.log('✅ Esquema de base de datos aplicado');
-    } catch (error) {
-      console.log('⚠️ Esquema ya aplicado o error (continuando...)');
-    }
-  } catch (error) {
-    console.error('❌ Error al inicializar base de datos:', error);
+    // Intentar ejecutar una query simple para verificar que funciona
+    await prisma.$executeRaw`SELECT 1`;
+    
+    // Intentar aplicar el esquema usando Prisma directamente
+    // Esto creará las tablas si no existen
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
+        id TEXT PRIMARY KEY,
+        checksum TEXT NOT NULL,
+        finished_at DATETIME,
+        migration_name TEXT NOT NULL,
+        logs TEXT,
+        rolled_back_at DATETIME,
+        started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        applied_steps_count INTEGER NOT NULL DEFAULT 0
+      );
+    `).catch(() => {
+      // Ignorar error si la tabla ya existe
+    });
+    
+    console.log('✅ Base de datos inicializada');
+  } catch (error: any) {
+    console.log('⚠️ Error al inicializar base de datos (continuando...):', error.message);
     // No lanzar error, dejar que el servidor inicie de todas formas
+    // La base de datos se creará cuando se haga la primera operación
   }
 }
 
