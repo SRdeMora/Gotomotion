@@ -25,11 +25,13 @@ export const useAdmin = (): AdminStatus => {
         const user = authService.getUser();
         
         if (!user || !user.email) {
+          console.log('[ADMIN] No hay usuario logueado');
           setStatus({ isAdmin: false, isLoading: false, error: null });
           return;
         }
 
         const userEmail = user.email.toLowerCase().trim();
+        console.log('[ADMIN] Verificando admin para:', userEmail);
         
         // Verificación local (frontend) - rápida
         const adminEmailsRaw = import.meta.env.VITE_ADMIN_EMAILS || '';
@@ -38,7 +40,11 @@ export const useAdmin = (): AdminStatus => {
           .map(email => email.trim().toLowerCase())
           .filter(email => email.length > 0);
         
+        console.log('[ADMIN] VITE_ADMIN_EMAILS configurado:', adminEmailsRaw);
+        console.log('[ADMIN] Lista de admins (frontend):', adminEmails);
+        
         const isLocalAdmin = adminEmails.length > 0 && adminEmails.includes(userEmail);
+        console.log('[ADMIN] Verificación local:', isLocalAdmin);
 
         // Verificación remota (backend) - más segura y definitiva
         let isRemoteAdmin = false;
@@ -46,22 +52,29 @@ export const useAdmin = (): AdminStatus => {
         
         try {
           const token = authService.getToken();
-          if (token) {
-            // Usar el endpoint de diagnóstico específico para verificar admin
-            const diagnostics = await api.getAdminDiagnostics(token);
-            isRemoteAdmin = diagnostics.isAdmin;
-            
-            // Log detallado para debugging
-            console.log('[ADMIN] Verificación backend:', {
-              configured: diagnostics.configured,
-              userEmail: diagnostics.userEmail,
-              adminEmails: diagnostics.adminEmails,
-              isAdmin: diagnostics.isAdmin,
-              envLoaded: diagnostics.envLoaded,
+          if (!token) {
+            console.log('[ADMIN] No hay token, usando solo verificación local');
+            // Sin token, usar solo verificación local
+            setStatus({
+              isAdmin: isLocalAdmin,
+              isLoading: false,
+              error: null,
             });
-          } else {
-            console.log('[ADMIN] No hay token, solo verificación local');
+            return;
           }
+
+          // Usar el endpoint de diagnóstico específico para verificar admin
+          const diagnostics = await api.getAdminDiagnostics(token);
+          isRemoteAdmin = diagnostics.isAdmin;
+          
+          // Log detallado para debugging
+          console.log('[ADMIN] Verificación backend:', {
+            configured: diagnostics.configured,
+            userEmail: diagnostics.userEmail,
+            adminEmails: diagnostics.adminEmails,
+            isAdmin: diagnostics.isAdmin,
+            envLoaded: diagnostics.envLoaded,
+          });
         } catch (error: any) {
           backendError = error;
           const status = error?.status || error?.response?.status;
@@ -78,71 +91,47 @@ export const useAdmin = (): AdminStatus => {
           } else if (status === 401) {
             // No autenticado
             isRemoteAdmin = false;
-          } else if (status === 500) {
-            // Error 500 puede ser por configuración faltante en backend
-            // En este caso, confiamos en la verificación local
-            console.warn('⚠️ Backend retornó error 500. Usando verificación local.');
-            isRemoteAdmin = isLocalAdmin;
           } else {
-            // Para otros errores (network, etc), confiamos en la verificación local
+            // Para otros errores (500, network, etc), usar verificación local como fallback
+            console.warn('[ADMIN] Error del backend, usando verificación local como fallback');
             isRemoteAdmin = isLocalAdmin;
           }
         }
 
-        // El usuario es admin SOLO si pasa la verificación remota O la local
-        // IMPORTANTE: Ambas verificaciones comparan contra ADMIN_EMAILS/VITE_ADMIN_EMAILS
-        // NO todos los usuarios son admin, solo los que están en la lista configurada
+        // Lógica simplificada y clara:
+        // - Si backend funciona y dice que es admin → es admin
+        // - Si backend funciona y dice que NO es admin → NO es admin
+        // - Si backend falla → usar verificación local
         let isAdmin = false;
         
         if (backendError) {
-          // Si hay error del backend:
-          // - Si es 401 (no autenticado), definitivamente no es admin
-          // - Si es 403 (no autorizado), definitivamente no es admin  
-          // - Si es 500 u otro error, usar verificación local como fallback
-          //   PERO solo si isLocalAdmin es true (es decir, el email está en VITE_ADMIN_EMAILS)
-          if (backendError.status === 401 || backendError.status === 403) {
-            isAdmin = false; // Definitivamente no es admin
-          } else {
-            // Para otros errores (500, network, etc), usar verificación local
-            // isLocalAdmin solo es true si el email está en VITE_ADMIN_EMAILS
-            isAdmin = isLocalAdmin;
-          }
+          // Hay error del backend, usar verificación local
+          isAdmin = isLocalAdmin;
         } else {
-          // Sin errores del backend:
-          // - Si remoto dice que es admin, confiar en eso (el email está en ADMIN_EMAILS del backend)
-          // - Si remoto dice que NO es admin, entonces NO es admin (aunque local diga que sí)
-          // - Solo usar local si remoto no está disponible o hay error
-          // IMPORTANTE: isRemoteAdmin solo es true si el email está en ADMIN_EMAILS del backend
+          // Backend funciona correctamente, confiar en su respuesta
           isAdmin = isRemoteAdmin;
           
-          // Solo usar local como fallback si remoto no está disponible
-          // Pero esto solo debería pasar si hay un error, que ya manejamos arriba
+          // Si backend dice que no es admin pero local dice que sí,
+          // puede ser que el backend no tenga ADMIN_EMAILS configurado
+          // En ese caso, usar local como fallback
           if (!isAdmin && isLocalAdmin) {
-            // Si remoto dice que no es admin pero local dice que sí,
-            // puede ser que el backend no tenga ADMIN_EMAILS configurado
-            // En este caso, confiar en local SOLO si está configurado
-            console.warn('[ADMIN] Backend no confirmó admin pero local sí. Usando verificación local como fallback.');
+            console.warn('[ADMIN] Backend dice que NO es admin pero local dice que SÍ. Usando local como fallback (puede ser que ADMIN_EMAILS no esté configurado en backend).');
             isAdmin = isLocalAdmin;
           }
         }
 
-        // Si hay error 500 del backend y no hay verificación local, mostrar error útil
-        let errorMessage = null;
-        if (backendError && (backendError.status === 500 || backendError.response?.status === 500) && !isLocalAdmin) {
-          errorMessage = 'El servidor backend no tiene configurado ADMIN_EMAILS. Por favor, configura ADMIN_EMAILS en server/.env y reinicia el servidor.';
-        }
-
-        console.log('[ADMIN] Resultado final:', {
+        console.log('[ADMIN] RESULTADO FINAL:', {
           isAdmin,
           isLocalAdmin,
           isRemoteAdmin,
           userEmail,
+          tieneBackendError: !!backendError,
         });
 
         setStatus({
           isAdmin,
           isLoading: false,
-          error: errorMessage,
+          error: null,
         });
       } catch (error: any) {
         console.error('[ADMIN] Error general:', error);
@@ -155,6 +144,16 @@ export const useAdmin = (): AdminStatus => {
     };
 
     checkAdminStatus();
+    
+    // Re-ejecutar cuando cambie el usuario (por si se loguea después)
+    const interval = setInterval(() => {
+      const user = authService.getUser();
+      if (user && user.email) {
+        checkAdminStatus();
+      }
+    }, 2000); // Verificar cada 2 segundos
+    
+    return () => clearInterval(interval);
   }, []);
 
   return status;

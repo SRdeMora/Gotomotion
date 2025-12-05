@@ -24,8 +24,16 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
 
   // Agregar link de admin si el usuario es admin (verificación profesional)
   // Solo mostrar después de que termine la carga para evitar parpadeos
+  // DEBUG: Log para ver qué está pasando
+  if (!isLoading) {
+    console.log('[NAVBAR] Estado admin:', { isAdmin, isLoading, userEmail: user?.email });
+  }
+  
   if (!isLoading && isAdmin && user) {
     navLinks.push({ name: 'Admin', path: '/admin' });
+    console.log('[NAVBAR] Agregando link Admin a la navegación');
+  } else if (!isLoading && user) {
+    console.log('[NAVBAR] NO se agrega Admin porque:', { isAdmin, isLoading, tieneUser: !!user });
   }
 
   const isActive = (path: string) => location.pathname === path;
